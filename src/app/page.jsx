@@ -1,7 +1,25 @@
+'use client';
+
 import Image from "next/image";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/lib/supabase";
+import { useRouter } from "next/navigation";
 
 export default function Home() {
+  const router = useRouter();
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({data: {session}}) => {
+      setUser(session?.user);
+    })
+  }, []);
+
+
+  
+
+
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-24 bg-yellow-100">
       <div className="z-10 w-full max-w-5xl items-center justify-between font-mono text-sm">
@@ -18,13 +36,22 @@ export default function Home() {
           />
         </div>
         <p className="text-2xl text-center mb-8 font-bold text-gray-800">
-          "It's not just a hotdog detector... it's a hotdog life story
-          generator!"
+          `It&apos;s not just a hotdog detector... it&apos;s a hotdog life story
+          generator!`
         </p>
         <div className="flex justify-center">
           <Button
             size="lg"
             className="text-xl px-8 py-6 bg-red-600 hover:bg-red-700"
+            onClick={() => {
+
+              if (!user){
+                router.push('/page/auth');
+              }
+              else{
+                router.push('/page/detect');
+              }
+            }}
           >
             Detect Hotdogs Now!
           </Button>
