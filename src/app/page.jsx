@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import Image from "next/image";
 import { useState, useEffect } from "react";
@@ -9,16 +9,39 @@ import { useRouter } from "next/navigation";
 export default function Home() {
   const router = useRouter();
   const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({data: {session}}) => {
-      setUser(session?.user);
-    })
+    // Check current session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user || null);
+      setLoading(false);
+    });
+
+    // Listen for auth changes
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user || null);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
+  const handleDetectClick = async () => {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    console.log("Session in click handler:", session);
 
-  
-
+    if (!session) {
+      console.log("No session, redirecting to auth...");
+      router.push("/auth");
+    } else {
+      console.log("Session found, proceeding to detect...");
+      router.push("/detect");
+    }
+  };
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-24 bg-yellow-100">
@@ -26,9 +49,9 @@ export default function Home() {
         <h1 className="text-6xl font-bold text-center mb-8 text-red-600 animate-bounce">
           AI Hotdog Detector 2.0: The Revenge
         </h1>
-        <div className="relative flex place-items-center mb-8">
+        <div className="relative flex place-items-center justify-center mb-8">
           <Image
-            src="/hotdog-meme.jpg"
+            src="/hotdog_meme.jpg"
             alt="Hotdog Meme"
             width={500}
             height={300}
@@ -43,15 +66,8 @@ export default function Home() {
           <Button
             size="lg"
             className="text-xl px-8 py-6 bg-red-600 hover:bg-red-700"
-            onClick={() => {
-
-              if (!user){
-                router.push('/page/auth');
-              }
-              else{
-                router.push('/page/detect');
-              }
-            }}
+            onClick={handleDetectClick}
+            disabled={loading}
           >
             Detect Hotdogs Now!
           </Button>

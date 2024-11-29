@@ -22,18 +22,25 @@ export default function ProfilePage() {
 
       try {
         //Fetch user profile data
-        const { data, error } = await supabase
+        const { data: existingProfile, error: fetchError } = await supabase
           .from("profiles")
           .select("*")
-          .eq("user_id", user.id)
-          .single();
+          .eq("id", user.id)
+          .maybeSingle();
 
-        if (error) throw error;
+        console.log("Existing profile check: ", existingProfile);
+
+        if (fetchError) {
+          console.error("Error fetching profile data:", fetchError);
+          return;
+        }
 
         //If no profile data, create one with default values
-        if (!data) {
+        if (!existingProfile) {
+          console.log("No profile data found, creating new profile...");
+
           const defaultProfile = {
-            user_id: user.id,
+            id: user.id,
             name: user.email?.split("@")[0] || "Hotdog Enthusiast",
             title: "Novice Wiener Spotter",
             hotdogs_detected: 0,
@@ -41,21 +48,27 @@ export default function ProfilePage() {
             achievements: [],
             recent_stories: [],
           };
-          const { data: newProfile, error: insertError } = await supabase
+
+          const { data: newProfile, error: createError } = await supabase
             .from("profiles")
-            .insert([defaultProfile])
+            .upsert([defaultProfile])
             .select()
             .single();
 
-          if (insertError) throw insertError;
+          if (createError) {
+            console.error("Error creating profile data:", createError);
+            throw createError;
+          }
+
+          console.log("New Profile created: ", newProfile);
           setProfileData(newProfile);
         } else {
-          setProfileData(data);
+          console.log("Existing profile data found: ", existingProfile);
+          setProfileData(existingProfile);
         }
       } catch (error) {
         console.error("Error loading profile data:", error);
-
-        // Use mock data as fallback for now
+        //Setting mock data as fallback
         setProfileData({
           name: user.email?.split("@")[0] || "Hotdog Enthusiast",
           title: "Novice Wiener Spotter",
@@ -70,34 +83,6 @@ export default function ProfilePage() {
     }
     loadProfileData();
   }, [user]);
-  // Mock data - in a real app, this would come from a database
-  //   const user = {
-  //     name: "Hotdog Enthusiast",
-  //     title: "Certified Wiener Wizard",
-  //     hotdogsDetected: 42,
-  //     notHotdogsDetected: 13,
-  //     achievements: ["Mustard Master", "Bun Connoisseur", "Ketchup King"],
-  //     recentStories: [
-  //       {
-  //         image: "/hotdog1.jpg",
-  //         story:
-  //           "This brave little hotdog survived the great Condiment War of '22. It's been seeking revenge on ketchup bottles ever since.",
-  //         isHotdog: true,
-  //       },
-  //       {
-  //         image: "/not-hotdog1.jpg",
-  //         story:
-  //           "Nice try, banana. Your curved shape doesn't fool me. You're no hotdog, just a wannabe wiener.",
-  //         isHotdog: false,
-  //       },
-  //       {
-  //         image: "/hotdog2.jpg",
-  //         story:
-  //           "This hotdog was raised in a vegetarian household. It's having an existential crisis.",
-  //         isHotdog: true,
-  //       },
-  //     ],
-  //   };
 
   if (loading) {
     return (
@@ -111,7 +96,7 @@ export default function ProfilePage() {
       <Card className="mb-8">
         <CardHeader>
           <CardTitle className="text-3xl font-bold text-center">
-            {profileData.name}'s Hotdog Hall of Fame
+            {profileData.name}&apos;s Hotdog Hall of Fame
           </CardTitle>
           <p className="text-center text-xl font-semibold text-muted-foreground">
             {profileData.title}

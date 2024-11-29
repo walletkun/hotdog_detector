@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -10,7 +10,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 import {
-  DogIcon as Hotdog,
+  Dog as Hotdog,
   XCircle,
   Upload,
   Loader2,
@@ -27,18 +27,80 @@ export default function DetectPage() {
   const [loading, setLoading] = useState(false);
   const [detectionCount, setDetectionCount] = useState(0);
 
+  console.log(user);
+
   useEffect(() => {
     if (!user) {
-      router.push("/page/auth");
+      router.push("/auth");
     }
   }, [user, router]);
 
-  const handleImageUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => setImage(e.target.result);
-      reader.readAsDataURL(file);
+  const handleImageUpload = async (e) => {
+    try {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      setLoading(true);
+
+      // Validate file type
+      if (!file.type.startsWith("image/")) {
+        throw new Error("Please upload an image file.");
+      }
+
+      // 5MB limit
+      if (file.size > 5 * 1024 * 1024) {
+        throw new Error(
+          "Image file is too large. Please upload an image under 5MB."
+        );
+      }
+
+      // Create unique file name with timestamp
+      const fileExt = file.name.split(".").pop();
+      const fileName = `${user.id}-${Date.now()}.${fileExt}`;
+
+      // Log before upload
+      console.log("Attempting to upload:", {
+        fileName,
+        fileSize: file.size,
+        fileType: file.type,
+      });
+
+      const { data, error: uploadError } = await supabase.storage
+        .from("hotdog-images")
+        .upload(fileName, file, {
+          cacheControl: "3600",
+          upsert: false,
+        });
+
+      if (uploadError) {
+        console.error("Upload error details:", uploadError);
+        throw uploadError;
+      }
+
+      console.log("Upload successful:", data);
+
+      const {
+        data: { publicUrl },
+        error: urlError,
+      } = supabase.storage.from("hotdog-images").getPublicUrl(fileName);
+
+      if (urlError) {
+        console.error("URL generation error:", urlError);
+        throw urlError;
+      }
+
+      console.log("Public URL generated:", publicUrl);
+      setImage(publicUrl);
+    } catch (error) {
+      console.error("Error handling image upload:", {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code,
+      });
+      alert(error.message || "Failed to upload image. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -47,7 +109,7 @@ export default function DetectPage() {
       const { data: profile, error: fetchError } = await supabase
         .from("profiles")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("id", user.id)
         .single();
 
       if (fetchError) throw fetchError;
@@ -56,7 +118,7 @@ export default function DetectPage() {
         isHotdog,
         story,
         timestamp: new Date().toISOString(),
-        imageUrl: image, // In a real app, you'd upload this to storage first
+        imageUrl: image,
       };
 
       const updates = {
@@ -95,7 +157,7 @@ export default function DetectPage() {
       const { error: updateError } = await supabase
         .from("profiles")
         .update(updates)
-        .eq("user_id", user.id);
+        .eq("id", user.id);
 
       if (updateError) throw updateError;
     } catch (error) {
@@ -168,13 +230,49 @@ export default function DetectPage() {
             >
               Upload Your Suspect Image
             </Label>
-            <Input
-              id="image-upload"
-              type="file"
-              accept="image/*"
-              onChange={handleImageUpload}
-              className="cursor-pointer"
-            />
+
+            {/* Upload Input */}
+            <div className="space-y-4">
+              <Input
+                id="image-upload"
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                disabled={loading}
+                className="cursor-pointer"
+              />
+
+              {/* Loading State */}
+              {loading && (
+                <div className="text-center">
+                  <Loader2 className="h-8 w-8 animate-spin inline-block" />
+                  <p className="text-sm text-gray-500 mt-2">
+                    Uploading image...
+                  </p>
+                </div>
+              )}
+
+              {/* Image Preview */}
+              {image && !loading && (
+                <div className="relative">
+                  <Image
+                    src={image}
+                    alt="Uploaded image"
+                    width={400}
+                    height={300}
+                    className="w-full h-64 object-cover rounded-md"
+                  />
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    className="absolute top-2 right-2"
+                    onClick={() => setImage(null)}
+                  >
+                    Remove
+                  </Button>
+                </div>
+              )}
+            </div>
           </div>
 
           {image && (
@@ -241,7 +339,7 @@ export default function DetectPage() {
 
       <div className="mt-8 text-center">
         <p className="text-muted-foreground italic mb-4">
-          Remember: In the world of hotdog detection, we don't make
+          Remember: In the world of hotdog detection, we don&apos;t make
           mistakes—just happy little condiments.
         </p>
         <div className="flex justify-center space-x-4">
