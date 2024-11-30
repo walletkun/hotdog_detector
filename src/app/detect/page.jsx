@@ -26,6 +26,7 @@ export default function DetectPage() {
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [detectionCount, setDetectionCount] = useState(0);
+  const [generatedStory, setGeneratedStory] = useState(null);
 
   console.log(user);
 
@@ -165,39 +166,81 @@ export default function DetectPage() {
     }
   };
 
-  const detectHotdog = () => {
-    setLoading(true);
-    setDetectionCount((prevCount) => prevCount + 1);
-    // Simulating API call with setTimeout
-    setTimeout(async () => {
-      const isHotdog = Math.random() > 0.5;
-      setResult(isHotdog);
-      const story = getHotdogStory(isHotdog);
-      await updateProfile(isHotdog, story);
+  const detectHotdog = async () => {
+    if (!image) {
+      alert("Please upload an image first.");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      console.log("Detecting hotdog...", image);
+
+      const detectResponse = await fetch("/api/detect", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ imageUrl: image }),
+      });
+
+      if (!detectResponse.ok) {
+        throw new Error(`HTTP error! status: ${detectResponse.status}`);
+      }
+
+      const detectData = await detectResponse.json();
+      console.log("Detection data:", detectData);
+
+      const storyResponse = await fetch("/api/generate-story", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          isHotdog: detectData.isHotdog,
+          labels: detectData.labels,
+        }),
+      });
+
+      if (!storyResponse.ok) {
+        throw new Error("Failed to generate story");
+      }
+
+      const { story } = await storyResponse.json();
+      console.log("Generated story:", story);
+
+      setResult(detectData.isHotdog);
+      setGeneratedStory(story);
+      await updateProfile(detectData.isHotdog, story);
+      setDetectionCount((prev) => prev + 1);
+    } catch (error) {
+      console.error("Error in detection process:", error);
+      alert("Failed to process image. Please try again.");
+    } finally {
       setLoading(false);
-    }, 2000);
+    }
   };
 
-  const getHotdogStory = (isHotdog) => {
-    const hotdogStories = [
-      "This hotdog has seen things you people wouldn't believe. Attack ships on fire off the shoulder of Orion. C-beams glitter in the dark near the Tannhäuser Gate. All those moments will be lost in time, like ketchup in rain.",
-      "Born in a food truck, raised in a bun, this hotdog dreamed of becoming a gourmet meal. Now it's living its best life as the star of your photo.",
-      "This hotdog is actually an undercover vegetable on a secret mission. Don't blow its cover!",
-      "Legend has it, this hotdog was forged in the fires of Mount Doom, one wiener to rule them all!",
-      "This hotdog just finished its PhD in Quantum Mechanics. It's both a particle and a wave... of flavor!",
-    ];
+  // const getHotdogStory = (isHotdog) => {
+  //   const hotdogStories = [
+  //     "This hotdog has seen things you people wouldn't believe. Attack ships on fire off the shoulder of Orion. C-beams glitter in the dark near the Tannhäuser Gate. All those moments will be lost in time, like ketchup in rain.",
+  //     "Born in a food truck, raised in a bun, this hotdog dreamed of becoming a gourmet meal. Now it's living its best life as the star of your photo.",
+  //     "This hotdog is actually an undercover vegetable on a secret mission. Don't blow its cover!",
+  //     "Legend has it, this hotdog was forged in the fires of Mount Doom, one wiener to rule them all!",
+  //     "This hotdog just finished its PhD in Quantum Mechanics. It's both a particle and a wave... of flavor!",
+  //   ];
 
-    const notHotdogStories = [
-      "Nice try, but that's not a hotdog. That's clearly a submarine sandwich in disguise. We're onto you, sub!",
-      "That's not a hotdog, that's just a very long meatball. Don't let it fool you!",
-      "Hotdog? More like hot-nope! This imposter probably thinks a bun is a type of hairstyle.",
-      "Our AI has detected a rare species: the elusive 'Notdogus Maximus'. National Geographic is on their way!",
-      "This is the worst hotdog costume I've ever seen. It's like it's not even trying to be a hotdog!",
-    ];
+  //   const notHotdogStories = [
+  //     "Nice try, but that's not a hotdog. That's clearly a submarine sandwich in disguise. We're onto you, sub!",
+  //     "That's not a hotdog, that's just a very long meatball. Don't let it fool you!",
+  //     "Hotdog? More like hot-nope! This imposter probably thinks a bun is a type of hairstyle.",
+  //     "Our AI has detected a rare species: the elusive 'Notdogus Maximus'. National Geographic is on their way!",
+  //     "This is the worst hotdog costume I've ever seen. It's like it's not even trying to be a hotdog!",
+  //   ];
 
-    const stories = isHotdog ? hotdogStories : notHotdogStories;
-    return stories[Math.floor(Math.random() * stories.length)];
-  };
+  //   const stories = isHotdog ? hotdogStories : notHotdogStories;
+  //   return stories[Math.floor(Math.random() * stories.length)];
+  // };
 
   const getRandomLoadingMessage = () => {
     const messages = [
@@ -231,7 +274,6 @@ export default function DetectPage() {
               Upload Your Suspect Image
             </Label>
 
-            {/* Upload Input */}
             <div className="space-y-4">
               <Input
                 id="image-upload"
@@ -242,7 +284,6 @@ export default function DetectPage() {
                 className="cursor-pointer"
               />
 
-              {/* Loading State */}
               {loading && (
                 <div className="text-center">
                   <Loader2 className="h-8 w-8 animate-spin inline-block" />
@@ -274,18 +315,6 @@ export default function DetectPage() {
               )}
             </div>
           </div>
-
-          {image && (
-            <div className="mb-6">
-              <Image
-                src={image}
-                alt="Uploaded image"
-                width={400}
-                height={300}
-                className="w-full h-64 object-cover rounded-md"
-              />
-            </div>
-          )}
 
           <Button
             onClick={detectHotdog}
@@ -319,10 +348,11 @@ export default function DetectPage() {
                   ? "It's a bonafide hotdog!"
                   : "Not a hotdog! The disappointment is immeasurable."}
               </p>
-              <p className="text-center italic">{getHotdogStory(result)}</p>
+              {generatedStory && (
+                <p className="text-center italic">{generatedStory}</p>
+              )}
             </div>
           )}
-
           <div className="mt-6 text-center">
             <p className="text-sm text-muted-foreground">
               Hotdog Detection Attempts: {detectionCount}

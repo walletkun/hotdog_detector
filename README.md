@@ -1,36 +1,77 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# 🌭 AI HOTDOG DETECTOR 2.0
+
+A fun and interactive web application that uses AI to determine if an uploaded image contains a hotdog or not, complete with dramatic storytelling and achievements!
+
+## Features
+
+- 🤖 AI-powered hotdog detection using Google Vision API
+- 📝 Dynamic story generation for each detection using OpenAI
+- 🎯 User achievements and progression system
+- 🔐 Secure authentication with email and Google sign-in
+- 📊 User profile with detection history and statistics
+- 🖼️ Image upload and storage capabilities
+
+## Tech Stack
+
+- **Frontend**: Next.js 14, React, Tailwind CSS
+- **Backend**: Supabase (Authentication, Database, Storage)
+- **AI Services**: 
+  - Google Cloud Vision API for image detection
+  - OpenAI for story generation
+- **UI Components**: shadcn/ui
 
 ## Getting Started
 
-First, run the development server:
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/yourusername/hotdog-detector.git
+   cd hotdog-detector
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+2. **Install dependencies**
+    ```bash
+    npm install
+    ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+3. Set up environmental varaibles create a .env.local file with:
+    ```bash
+    NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+    NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_key
+    GOOGLE_APPLICATION_CREDENTIALS_JSON=your_google_credentials
+    OPENAI_API_KEY=your_openai_key
+    ```
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+4. Run the development server
+    ```bash
+    npm run dev
+    ```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
-## Learn More
+Project Structure:
+src/
+├── app/                    # Next.js app directory
+│   ├── api/               # API routes
+│   ├── auth/              # Authentication pages
+│   ├── detect/            # Hotdog detection page
+│   └── profile/           # User profile page
+├── components/            # Reusable components
+├── lib/                   # Utility functions and configs
+└── context/              # React context providers
 
-To learn more about Next.js, take a look at the following resources:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+# Features in Detail
+    - Authentication
+    - Email/Password registration and login
+    - Google OAuth integration
+    - Secure session management
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+# Profile System
+    - User statistics tracking
+    - Achievement system
+    - Detection history with stories
 
-## Deploy on Vercel
+# Hotdog Detection
+    - Image upload and validation
+    - AI-powered detection
+    - Dynamic story generation
+    - Real-time results
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.

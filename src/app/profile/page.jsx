@@ -18,26 +18,29 @@ export default function ProfilePage() {
 
   useEffect(() => {
     async function loadProfileData() {
-      if (!user) return;
+      if (!user) {
+        router.push("/auth");
+        return;
+      }
 
       try {
-        //Fetch user profile data
+        setLoading(true);
+        console.log("Attempting to load profile for user:", user.id);
+
+        // Fetch user profile data
         const { data: existingProfile, error: fetchError } = await supabase
           .from("profiles")
           .select("*")
           .eq("id", user.id)
           .maybeSingle();
 
-        console.log("Existing profile check: ", existingProfile);
-
         if (fetchError) {
-          console.error("Error fetching profile data:", fetchError);
-          return;
+          console.error("Fetch error details:", fetchError);
+          throw fetchError;
         }
 
-        //If no profile data, create one with default values
         if (!existingProfile) {
-          console.log("No profile data found, creating new profile...");
+          console.log("Creating new profile for user:", user.id);
 
           const defaultProfile = {
             id: user.id,
@@ -49,26 +52,31 @@ export default function ProfilePage() {
             recent_stories: [],
           };
 
-          const { data: newProfile, error: createError } = await supabase
+          const { data: newProfile, error: insertError } = await supabase
             .from("profiles")
-            .upsert([defaultProfile])
+            .insert([defaultProfile])
             .select()
             .single();
 
-          if (createError) {
-            console.error("Error creating profile data:", createError);
-            throw createError;
+          if (insertError) {
+            console.error("Insert error details:", insertError);
+            throw insertError;
           }
 
-          console.log("New Profile created: ", newProfile);
+          console.log("Successfully created profile:", newProfile);
           setProfileData(newProfile);
         } else {
-          console.log("Existing profile data found: ", existingProfile);
+          console.log("Found existing profile:", existingProfile);
           setProfileData(existingProfile);
         }
       } catch (error) {
-        console.error("Error loading profile data:", error);
-        //Setting mock data as fallback
+        console.error("Profile error:", {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+        });
+
+        // Set fallback profile data
         setProfileData({
           name: user.email?.split("@")[0] || "Hotdog Enthusiast",
           title: "Novice Wiener Spotter",
@@ -81,8 +89,9 @@ export default function ProfilePage() {
         setLoading(false);
       }
     }
+
     loadProfileData();
-  }, [user]);
+  }, [user, router]);
 
   if (loading) {
     return (
@@ -134,13 +143,14 @@ export default function ProfilePage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {profileData.recent_stories?.map((story, index) => (
           <Card key={index} className="overflow-hidden">
-            <Image
-              src="/api/placeholder/400/300"
-              alt={story.isHotdog ? "A majestic hotdog" : "A hotdog imposter"}
-              width={400}
-              height={300}
-              className="w-full h-48 object-cover"
-            />
+            <div className="relative w-full h-48">
+              <Image
+                src={story.imageUrl || "/api/placeholder/400/300"}
+                alt={story.isHotdog ? "A majestic hotdog" : "A hotdog imposter"}
+                fill
+                className="object-cover"
+              />
+            </div>
             <CardContent className="p-4">
               <Badge
                 variant={story.isHotdog ? "default" : "destructive"}
