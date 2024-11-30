@@ -30,7 +30,7 @@ export default function AuthPage() {
             access_type: "offline",
             prompt: "consent",
           },
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: `${window.location.origin}/profile`,
         },
       });
 
@@ -39,7 +39,6 @@ export default function AuthPage() {
         throw error;
       }
 
-      // If data.url exists, redirect the user
       if (data?.url) {
         window.location.href = data.url;
       }

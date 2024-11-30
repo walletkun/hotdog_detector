@@ -1,7 +1,3 @@
-import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
-import { cookies } from "next/headers";
-import { NextResponse } from "next/server";
-
 export async function GET(request) {
   try {
     const url = new URL(request.url);
@@ -19,35 +15,43 @@ export async function GET(request) {
         return NextResponse.redirect(new URL("/auth", url.origin));
       }
 
-      // Create or update profile using upsert
       if (user) {
-        const { error: upsertError } = await supabase.from("profiles").upsert(
-          {
-            id: user.id,
-            name: user.email?.split("@")[0] || "Hotdog Enthusiast",
-            title: "Novice Wiener Spotter",
-            hotdogs_detected: 0,
-            not_hotdogs_detected: 0,
-            achievements: [],
-            recent_stories: [],
-          },
-          {
-            onConflict: "id",
-            ignoreDuplicates: false,
-          }
-        );
+        const { data: existingProfile } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", user.id)
+          .single();
 
-        if (upsertError) {
-          console.error("Profile upsert error:", upsertError);
+        if (!existingProfile) {
+          const { error: upsertError } = await supabase.from("profiles").upsert(
+            {
+              id: user.id,
+              name: user.email?.split("@")[0] || "Hotdog Enthusiast",
+              title: "Novice Wiener Spotter",
+              hotdogs_detected: 0,
+              not_hotdogs_detected: 0,
+              achievements: [],
+              recent_stories: [],
+            },
+            {
+              onConflict: "id",
+              ignoreDuplicates: false,
+            }
+          );
+
+          if (upsertError) {
+            console.error("Profile creation error:", upsertError);
+            return NextResponse.redirect(new URL("/auth", url.origin));
+          }
         }
+
+        return NextResponse.redirect(new URL("/profile", url.origin));
       }
     }
 
-    // Redirect to home page
     return NextResponse.redirect(new URL("/", url.origin));
   } catch (error) {
     console.error("Callback error:", error);
-    const origin = new URL(request.url).origin;
-    return NextResponse.redirect(new URL("/auth", origin));
+    return NextResponse.redirect(new URL("/auth", url.origin));
   }
 }
