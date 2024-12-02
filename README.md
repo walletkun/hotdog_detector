@@ -47,6 +47,7 @@ A fun and interactive web application that uses AI to determine if an uploaded i
 
 
 Project Structure:
+```bash
 src/
 ├── app/                    # Next.js app directory
 │   ├── api/               # API routes
@@ -56,7 +57,7 @@ src/
 ├── components/            # Reusable components
 ├── lib/                   # Utility functions and configs
 └── context/              # React context providers
-
+```
 
 # Features in Detail
     - Authentication
